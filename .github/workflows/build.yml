@@ -1,0 +1,45 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x86, x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ (matrix.arch == 'arm64') && 'amd64_arm64' || matrix.arch }}
+      - name: Build mecab-ko
+        run: nmake -f Makefile.${{ matrix.arch }}.msvc
+        working-directory: src/
+      - name: Package mecab
+        run: |
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab.h
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab.exe
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab-cost-train.exe
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab-dict-gen.exe
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab-dict-index.exe
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab-system-eval.exe
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab-test-gen.exe
+          7z a mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip libmecab.dll
+        working-directory: src/
+      - name: Package mecab-ko library
+        run: |
+          7z a libmecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip mecab.h
+          7z a libmecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip libmecab.dll
+          7z a libmecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip libmecab.lib
+        working-directory: src/
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            src/mecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip
+            src/libmecab-${{github.ref_name}}-windows-${{ matrix.arch }}.zip
